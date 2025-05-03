@@ -1,3 +1,4 @@
+@import "tailwindcss";
 :root {
     --bg-gradient-start: #6a11cb;
     --bg-gradient-end: #2575fc;
