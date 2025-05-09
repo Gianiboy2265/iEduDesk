@@ -1,6 +1,7 @@
 "use client";
 import { useState, useEffect } from "react";
 import { account, ID } from "./appwrite";
+import { useRouter } from "next/navigation";
 
 const LoginPage = () => {
   const [loggedInUser, setLoggedInUser] = useState(null);
@@ -9,6 +10,7 @@ const LoginPage = () => {
   const [name, setName] = useState("");
   const [isRegisterMode, setIsRegisterMode] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const router = useRouter();
 
   // Attempt to get the current user on component mount
   useEffect(() => {
@@ -16,19 +18,24 @@ const LoginPage = () => {
       try {
         const user = await account.get();
         setLoggedInUser(user);
+        // Redirect to dashboard if logged in
+        router.push("/Dashboard");
       } catch (error) {
         // No user logged in or session expired
         setLoggedInUser(null);
       }
     };
     checkUser();
-  }, []);
+  }, [router]);
 
   const login = async (email, password) => {
     try {
       setIsLoading(true);
       await account.createEmailPasswordSession(email, password);
-      setLoggedInUser(await account.get());
+      const user = await account.get();
+      setLoggedInUser(user);
+      // Redirect to dashboard after successful login
+      router.push("/Dashboard");
     } catch (error) {
       console.error("Login failed:", error);
       alert("Login failed. Please check your credentials.");
@@ -41,21 +48,17 @@ const LoginPage = () => {
     try {
       setIsLoading(true);
       await account.create(ID.unique(), email, password, name);
-      login(email, password);
+      await account.createEmailPasswordSession(email, password);
+      const user = await account.get();
+      setLoggedInUser(user);
+      // Redirect to dashboard after successful registration
+      router.push("/Dashboard");
     } catch (error) {
       console.error("Registration failed:", error);
       alert(`Registration failed: ${error.message}`);
+    } finally {
       setIsLoading(false);
     }
-  };
-
-  const logout = async () => {
-    await account.deleteSession("current");
-    setLoggedInUser(null);
-    setEmail("");
-    setPassword("");
-    setName("");
-    setIsRegisterMode(false);
   };
 
   const handleSubmit = (e) => {
@@ -67,35 +70,8 @@ const LoginPage = () => {
     }
   };
 
-  if (loggedInUser) {
-    return (
-      <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-indigo-950 p-4">
-        <div className="w-full max-w-md p-8 bg-white dark:bg-gray-800 shadow-2xl rounded-xl transform transition-all duration-500 ease-in-out hover:scale-102">
-          <div className="text-center">
-            <div className="mx-auto w-24 h-24 bg-gradient-to-br from-blue-400 to-indigo-500 rounded-full flex items-center justify-center mb-4 shadow-lg">
-              <span className="text-2xl font-bold text-white">
-                {loggedInUser.name.charAt(0).toUpperCase()}
-              </span>
-            </div>
-            <h2 className="text-2xl font-semibold mb-2 text-gray-800 dark:text-gray-100">
-              Welcome back!
-            </h2>
-            <p className="text-xl font-medium mb-8 text-blue-600 dark:text-blue-400">
-              {loggedInUser.name}
-            </p>
-            <button
-              type="button"
-              className="w-full py-3 px-6 bg-red-600 dark:bg-red-700 text-white font-semibold rounded-lg hover:bg-red-700 dark:hover:bg-red-800 transition-all duration-300 ease-in-out transform hover:scale-105 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-opacity-50 shadow-md"
-              onClick={logout}
-            >
-              Logout
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
+  // If we detect the user is logged in, we'll redirect to dashboard in the useEffect
+  // So we only need to render the login form
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-50 to-indigo-100 dark:from-gray-900 dark:to-indigo-950 p-4">
       <div className="w-full max-w-md p-8 bg-white dark:bg-gray-800 shadow-2xl rounded-xl relative">
